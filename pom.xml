@@ -10,9 +10,10 @@
 
     <name>simplerpc-spring-boot-starter</name>
     <description>rpc调用框架</description>
-    <url>https://github.com/uinios/xxx</url>
+    <url>https://github.com/HuChen-dot/simplerpc-spring-boot-starter.git</url>
 
     <properties>
+
         <maven.compiler.source>8</maven.compiler.source>
         <maven.compiler.target>8</maven.compiler.target>
     </properties>
@@ -37,14 +38,14 @@
 
     <!--开源地址-->
     <scm>
-        <connection>scm:git:git@github.com:GitHub名称/项目.git</connection>
-        <developerConnection>scm:git:git@github.com:GitHub名称/项目.git</developerConnection>
-        <url>git@github.com:GitHub名称/项目.git</url>
+        <connection>scm:git:git@github.com:HuChen-dot/simplerpc-spring-boot-starter.git</connection>
+        <developerConnection>scm:git:git@github.com:HuChen-dot/simplerpc-spring-boot-starter.git</developerConnection>
+        <url>git@github.com:HuChen-dot/simplerpc-spring-boot-starter.git</url>
     </scm>
     <!--  Issue地址  -->
     <issueManagement>
         <system>Github Issue</system>
-        <url>https://github.com/GitHub名称/项目/issues</url>
+        <url>https://github.com/HuChen-dot/simplerpc-spring-boot-starter/issues</url>
     </issueManagement>
 
     <profiles>
@@ -105,20 +106,6 @@
                             </execution>
                         </executions>
                     </plugin>
-                    <!-- GPG -->
-<!--                    <plugin>-->
-<!--                        <groupId>org.apache.maven.plugins</groupId>-->
-<!--                        <artifactId>maven-gpg-plugin</artifactId>-->
-<!--                        <version>3.0.1</version>-->
-<!--                        <executions>-->
-<!--                            <execution>-->
-<!--                                <phase>verify</phase>-->
-<!--                                <goals>-->
-<!--                                    <goal>sign</goal>-->
-<!--                                </goals>-->
-<!--                            </execution>-->
-<!--                        </executions>-->
-<!--                    </plugin>-->
                 </plugins>
             </build>
         </profile>

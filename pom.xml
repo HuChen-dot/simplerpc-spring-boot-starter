@@ -6,9 +6,9 @@
 
     <groupId>io.github.HuChen-dot</groupId>
     <artifactId>simplerpc-spring-boot-starter</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <version>1.0</version>
 
-    <packaging>jar</packaging>
+    <packaging>pom</packaging>
 
     <name>simplerpc-spring-boot-starter</name>
     <description>rpc调用框架</description>
@@ -19,14 +19,6 @@
         <maven.compiler.target>8</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
-
-    <!-- 开源许可证 -->
-<!--    <licenses>-->
-<!--        <license>-->
-<!--            <name>GNU General Public License version 3</name>-->
-<!--            <url>https://opensource.org/licenses/GPL-3.0</url>-->
-<!--        </license>-->
-<!--    </licenses>-->
 
     <!-- 开源许可证 -->
     <licenses>
@@ -46,15 +38,16 @@
     </developers>
 
     <distributionManagement>
-        <repository>
-            <id>ossrh</id>
-            <url>https://oss.sonatype.org/service/local/staging/deploy/maven2</url>
-        </repository>
         <snapshotRepository>
             <id>ossrh</id>
-            <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+            <url>https://s01.oss.sonatype.org/content/repositories/snapshots</url>
         </snapshotRepository>
+        <repository>
+            <id>ossrh</id>
+            <url>https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+        </repository>
     </distributionManagement>
+
 
     <!--  Issue地址  -->
     <issueManagement>
@@ -106,7 +99,6 @@
 
 
     <build>
-
         <finalName>simplerpc-spring-boot-starter</finalName>
         <plugins>
             <plugin>
@@ -138,7 +130,7 @@
                 <extensions>true</extensions>
                 <configuration>
                     <serverId>ossrh</serverId>
-                    <nexusUrl>https://oss.sonatype.org/</nexusUrl>
+                    <nexusUrl>https://s01.oss.sonatype.org/</nexusUrl>
                     <autoReleaseAfterClose>true</autoReleaseAfterClose>
                 </configuration>
             </plugin>

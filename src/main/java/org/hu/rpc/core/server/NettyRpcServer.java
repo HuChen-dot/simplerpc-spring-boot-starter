@@ -23,9 +23,7 @@ import javax.annotation.PreDestroy;
  * @Description:
  * @DateTime: 2021/12/26 6:43 PM
  **/
-//此注解用来开启下面的@ConfigurationProperties注解，
 @EnableConfigurationProperties(NettyRpcServer.class)
-//用来读取配置文件中的值，给类的属性自动赋值
 @ConfigurationProperties(prefix = "simplerpc.netty.server.threadpoll")
 @Configuration
 public class NettyRpcServer implements Runnable {
@@ -35,7 +33,7 @@ public class NettyRpcServer implements Runnable {
     /**
      * 连接处理线程数
      */
-    private int bossGroupSize = 1;
+    private int bossGroupSize = 5;
 
     /**
      * 读写处理线程数

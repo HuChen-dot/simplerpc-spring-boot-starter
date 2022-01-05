@@ -12,7 +12,7 @@ import org.springframework.context.annotation.Configuration;
  * @DateTime: 2021/12/26 7:03 PM
  **/
 @Configuration
-@ComponentScan({"org.hu.org.hu.rpc"})
+@ComponentScan({"org.hu.rpc"})
 public class BeanStart{
 
 

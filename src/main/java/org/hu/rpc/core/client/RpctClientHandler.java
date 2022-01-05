@@ -8,7 +8,7 @@ import java.util.concurrent.Callable;
 /**
  * @Author: hu.chen
  * @Description: 服务端业务处理Handler；继承SimpleChannelInboundHandler时指定的
- * 范型为消息的类型，
+ * 泛型为消息的类型，
  * @DateTime: 2021/12/25 3:05 PM
  **/
 public class RpctClientHandler extends SimpleChannelInboundHandler<String> implements Callable {

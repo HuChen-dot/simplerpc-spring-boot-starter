@@ -31,9 +31,7 @@ import java.util.UUID;
  * @DateTime: 2021/12/26 9:50 PM
  **/
 @Component
-//此注解用来开启下面的@ConfigurationProperties注解，
 @EnableConfigurationProperties(JdkProxy.class)
-//用来读取配置文件中的值，给类的属性自动赋值
 @ConfigurationProperties(prefix = "simplerpc.netty.client.threadpoll")
 public class JdkProxy {
 

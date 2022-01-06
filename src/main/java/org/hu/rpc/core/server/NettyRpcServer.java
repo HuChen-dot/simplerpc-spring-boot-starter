@@ -24,7 +24,7 @@ import javax.annotation.PreDestroy;
  * @DateTime: 2021/12/26 6:43 PM
  **/
 @EnableConfigurationProperties(NettyRpcServer.class)
-@ConfigurationProperties(prefix = "simplerpc.netty.server.threadpoll")
+@ConfigurationProperties(prefix = "simplerpc.server.threadpoll")
 @Configuration
 public class NettyRpcServer implements Runnable {
     Logger log = LoggerFactory.getLogger(NettyRpcServer.class);

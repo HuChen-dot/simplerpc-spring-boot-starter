@@ -13,7 +13,7 @@ import org.springframework.context.annotation.Configuration;
  **/
 @Configuration
 @ComponentScan({"org.hu.rpc"})
-public class BeanStart{
+public class BeanConfiguration{
 
 
 

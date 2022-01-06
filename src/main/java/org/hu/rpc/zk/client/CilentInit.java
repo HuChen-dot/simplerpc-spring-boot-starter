@@ -62,8 +62,6 @@ public class CilentInit {
             }
         });
 
-
-
         // 获取根路径下的子节点
         List<String> childNodes = zkClientUtils.getNodes(namespace);
 

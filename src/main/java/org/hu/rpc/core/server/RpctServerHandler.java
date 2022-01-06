@@ -46,6 +46,7 @@ public class RpctServerHandler extends SimpleChannelInboundHandler<String> imple
     @Autowired
     private JdkProxy jdkProxy;
 
+
     /**
      * 处理通道读取事件
      *
@@ -148,8 +149,6 @@ public class RpctServerHandler extends SimpleChannelInboundHandler<String> imple
             interfaceApi.add(className);
             beans.put(className.getName(), serviceBean);
         }
-
-
 
 
         // 处理创建客户端的代理对象

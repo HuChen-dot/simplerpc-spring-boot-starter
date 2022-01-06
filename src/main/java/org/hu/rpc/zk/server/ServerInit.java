@@ -1,7 +1,7 @@
 package org.hu.rpc.zk.server;
 
 import org.hu.rpc.core.server.RpctServerHandler;
-import org.hu.rpc.zk.util.IpUtils;
+import org.hu.rpc.util.IpUtils;
 import org.hu.rpc.zk.util.ZkClientUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;

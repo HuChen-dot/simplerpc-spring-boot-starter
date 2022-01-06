@@ -17,8 +17,4 @@ public class LoadBalancingConst {
      */
     public static final String RANDOM="random";
 
-    /**
-     * 根据响应时间进行负载均衡
-     */
-    public static final String RESPONSE_TIME="response_time";
 }

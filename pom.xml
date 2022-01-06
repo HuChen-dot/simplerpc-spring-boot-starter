@@ -6,7 +6,7 @@
 
     <groupId>io.github.HuChen-dot</groupId>
     <artifactId>simplerpc-spring-boot-starter</artifactId>
-    <version>1.5</version>
+    <version>1.6</version>
 
     <packaging>jar</packaging>
 

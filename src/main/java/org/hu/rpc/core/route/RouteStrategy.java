@@ -76,15 +76,10 @@ public class RouteStrategy {
     private RpcLoadBalancing getRpcLoadBalancing() {
         switch (nettyClientConfig.getLoadbalancing()) {
             case LoadBalancingConst.POLLING: {
-
                 return BeanUtils.getBean(DefaultRpcLoadBalancing.class);
             }
             case LoadBalancingConst.RANDOM: {
-
                 return BeanUtils.getBean(RandomRpcLoadBalancing.class);
-            }
-            case LoadBalancingConst.RESPONSE_TIME: {
-                return BeanUtils.getBean(ResponseTimeRpcLoadBalancing.class);
             }
             default: {
                 return BeanUtils.getBean(DefaultRpcLoadBalancing.class);

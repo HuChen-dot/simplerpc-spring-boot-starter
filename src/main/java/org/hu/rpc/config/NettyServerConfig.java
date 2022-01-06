@@ -10,7 +10,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
  * @DateTime: 2021/12/26 6:39 PM
  **/
 @EnableConfigurationProperties(NettyServerConfig.class)
-@ConfigurationProperties(prefix = "simplerpc.netty.server")
+@ConfigurationProperties(prefix = "simplerpc.server")
 public class NettyServerConfig {
 
     /**

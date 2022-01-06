@@ -1,4 +1,4 @@
-package org.hu.rpc.zk.util;
+package org.hu.rpc.util;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

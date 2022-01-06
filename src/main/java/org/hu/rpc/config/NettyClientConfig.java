@@ -14,7 +14,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * @DateTime: 2021/12/26 6:39 PM
  **/
 @EnableConfigurationProperties(NettyClientConfig.class)
-@ConfigurationProperties(prefix = "simplerpc.netty.client")
+@ConfigurationProperties(prefix = "simplerpc.consumer")
 public class NettyClientConfig {
 
     /**

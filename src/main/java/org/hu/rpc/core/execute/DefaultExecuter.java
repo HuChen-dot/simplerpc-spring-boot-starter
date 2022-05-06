@@ -54,15 +54,11 @@ public class DefaultExecuter implements InvocationHandler {
 
             Object result = send.getResult();
 
-            if (result == null) {
+            if (result == null || !JsonUtils.isJsonType(result.toString())) {
                 return result;
             } else {
-                if (JsonUtils.isJsonType(result.toString())) {
-                    return JSON.parseObject(result.toString(), method.getReturnType());
-                }
-                return result;
+                return JSON.parseObject(result.toString(), method.getReturnType());
             }
-
         } finally {
             // 关闭资源
             nettyRpcClient.close();

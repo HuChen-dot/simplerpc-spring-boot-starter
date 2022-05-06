@@ -10,8 +10,12 @@ import java.util.List;
 public interface RpcLoadBalancing {
 
 
+
     /**
      * 负载均衡方法
+     * @param services 服务提供者列表
+     * @param path 路径信息
+     * @return
      */
     String[] load(List<String[]> services,String path);
 }

@@ -1,8 +1,8 @@
 package org.hu.rpc.util;
 
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
+import io.netty.util.concurrent.DefaultThreadFactory;
+
+import java.util.concurrent.*;
 
 /**
  * @Author: hu.chen
@@ -12,9 +12,11 @@ import java.util.concurrent.TimeUnit;
 public class ThreadPoolUtil {
 
     private static ThreadPoolExecutor threadPoolExecutor = new ThreadPoolExecutor(60, 80, 3, TimeUnit.SECONDS
-            , new ArrayBlockingQueue<>(200));
+            , new ArrayBlockingQueue<>(200), new DefaultThreadFactory("worker"));
 
     public static ThreadPoolExecutor poolExecutor(){
+
+        Executors.newCachedThreadPool();
         return threadPoolExecutor;
     }
 }

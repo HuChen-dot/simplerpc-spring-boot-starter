@@ -20,13 +20,13 @@ public class IpUtils {
      **/
     public static String getLocalIpAddr() {
 
-        String sIP = "";
+        String ipStr = "";
         InetAddress ip = null;
         try {
-            boolean bFindIP = false;
+            boolean flag = false;
             Enumeration<NetworkInterface> netInterfaces = NetworkInterface.getNetworkInterfaces();
             while (netInterfaces.hasMoreElements()) {
-                if (bFindIP) {
+                if (flag) {
                     break;
                 }
                 NetworkInterface ni = netInterfaces.nextElement();
@@ -35,7 +35,7 @@ public class IpUtils {
                     ip = ips.nextElement();
                     if (!ip.isLoopbackAddress()
                             && ip.getHostAddress().matches("(\\d{1,3}\\.){3}\\d{1,3}")) {
-                        bFindIP = true;
+                        flag = true;
                         break;
                     }
                 }
@@ -44,9 +44,9 @@ public class IpUtils {
             log.error("获取ip地址失败：{}",e);
         }
         if (null != ip) {
-            sIP = ip.getHostAddress();
+            ipStr = ip.getHostAddress();
         }
-        return sIP;
+        return ipStr;
     }
 
 

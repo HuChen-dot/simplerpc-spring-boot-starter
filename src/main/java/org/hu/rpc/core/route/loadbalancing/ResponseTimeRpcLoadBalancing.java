@@ -24,7 +24,7 @@ public class ResponseTimeRpcLoadBalancing implements RpcLoadBalancing {
     /**
      * 定义相差多长时间，忽略
      */
-    private static final long time = 5000;
+    private static final long TIME = 5000;
 
     @Override
     public String[] load(List<String[]> services, String path) {
@@ -33,7 +33,7 @@ public class ResponseTimeRpcLoadBalancing implements RpcLoadBalancing {
         }
         int i = 1000000;
 
-        Map<Integer, List<String[]>> map = new ConcurrentHashMap<>();
+        Map<Integer, List<String[]>> map = new ConcurrentHashMap<>(16);
 
         // 获取当前时间
         Date date = new Date();
@@ -51,7 +51,7 @@ public class ResponseTimeRpcLoadBalancing implements RpcLoadBalancing {
                 long l = DateUtil.dateMinusDate(date, split[1]);
 
                 // 判断当前时间和当前时间的差值，如果大于阀值，则清空，循环下一个
-                if (l > time) {
+                if (l > TIME) {
                     // 使用redis 懒删除策略
                     zkClientUtils.updataNode(zkClientUtils.getNameSpace() + "/" + path + "/" + service[0] + ":" + service[1], "");
                     continue;

@@ -11,7 +11,7 @@ import java.util.concurrent.Callable;
  * 泛型为消息的类型，
  * @DateTime: 2021/12/25 3:05 PM
  **/
-public class RpctClientHandler extends SimpleChannelInboundHandler<String> implements Callable {
+public class RpcClientHandler extends SimpleChannelInboundHandler<String> implements Callable {
 
 
     private ChannelHandlerContext ctx;

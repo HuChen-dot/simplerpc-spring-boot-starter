@@ -54,7 +54,7 @@ public class NettyRpcClient {
 
     private Channel channel = null;
 
-    private RpctClientHandler rpctClientHandler = new RpctClientHandler();
+    private RpcClientHandler rpcClientHandler = new RpcClientHandler();
 
 
     public void start() {
@@ -84,7 +84,7 @@ public class NettyRpcClient {
                     channel.pipeline().addLast(new StringEncoder());
 
                     //8：向pipeline中添加自定义业务处理handier
-                    channel.pipeline().addLast(rpctClientHandler);
+                    channel.pipeline().addLast(rpcClientHandler);
                 }
             });
             //7: 启动客户端绑定端口，同时将异步改为同步
@@ -114,8 +114,8 @@ public class NettyRpcClient {
      * 提供给调用者发送消息的方法
      */
     public RpcResponse send(String request) throws ExecutionException, InterruptedException {
-        rpctClientHandler.setRequest(request);
-        Future<String> submit = ThreadPoolUtil.poolExecutor().submit(rpctClientHandler);
+        rpcClientHandler.setRequest(request);
+        Future<String> submit = ThreadPoolUtil.poolExecutor().submit(rpcClientHandler);
         String response = submit.get();
 
         return JSON.parseObject(response, RpcResponse.class);

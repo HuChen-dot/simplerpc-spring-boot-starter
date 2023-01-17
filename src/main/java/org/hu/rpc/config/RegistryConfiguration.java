@@ -1,6 +1,6 @@
 package org.hu.rpc.config;
 
-import org.hu.rpc.zk.util.ZkClientUtils;
+import org.hu.rpc.register.zk.util.ZkClientService;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -23,8 +23,8 @@ public class RegistryConfiguration {
     private boolean openzk = false;
 
     @Bean
-    public ZkClientUtils zkClientUtils() {
-        return new ZkClientUtils(address, openzk);
+    public ZkClientService zkClientService() {
+        return new ZkClientService(address, openzk);
     }
 
     public String getAddress() {

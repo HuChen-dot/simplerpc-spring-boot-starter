@@ -1,4 +1,4 @@
-package org.hu.rpc.zk.util;
+package org.hu.rpc.register.zk.util;
 
 import org.apache.curator.RetryPolicy;
 import org.apache.curator.framework.CuratorFramework;
@@ -10,9 +10,6 @@ import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.data.Stat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
-import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
 import java.nio.charset.StandardCharsets;
@@ -23,9 +20,9 @@ import java.util.List;
  * @Description:
  * @DateTime: 2021/12/29 10:15 AM
  **/
-public class ZkClientUtils {
+public class ZkClientService {
 
-    private static Logger log = LoggerFactory.getLogger(ZkClientUtils.class);
+    private static Logger log = LoggerFactory.getLogger(ZkClientService.class);
 
 
     private CuratorFramework client;
@@ -37,7 +34,7 @@ public class ZkClientUtils {
      */
     private boolean openzk;
 
-    public ZkClientUtils(String address, boolean openzk) {
+    public ZkClientService(String address, boolean openzk) {
         this.address=address;
         this.openzk=openzk;
     }

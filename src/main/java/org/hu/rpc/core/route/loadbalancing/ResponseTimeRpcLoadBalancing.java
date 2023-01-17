@@ -2,7 +2,7 @@ package org.hu.rpc.core.route.loadbalancing;
 
 import org.hu.rpc.exception.SimpleRpcException;
 import org.hu.rpc.util.DateUtil;
-import org.hu.rpc.zk.util.ZkClientUtils;
+import org.hu.rpc.register.zk.util.ZkClientService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -19,7 +19,7 @@ public class ResponseTimeRpcLoadBalancing implements RpcLoadBalancing {
 
 
     @Autowired
-    private ZkClientUtils zkClientUtils;
+    private ZkClientService zkClientService;
 
     /**
      * 定义相差多长时间，忽略
@@ -28,7 +28,7 @@ public class ResponseTimeRpcLoadBalancing implements RpcLoadBalancing {
 
     @Override
     public String[] load(List<String[]> services, String path) {
-        if (!zkClientUtils.isOpenzk()) {
+        if (!zkClientService.isOpenzk()) {
             throw new SimpleRpcException("使用响应时间进行负载均衡，必须使用zk作为注册中心");
         }
         int i = 1000000;
@@ -39,7 +39,7 @@ public class ResponseTimeRpcLoadBalancing implements RpcLoadBalancing {
         Date date = new Date();
 
         for (String[] service : services) {
-            String dataStr = zkClientUtils.readNode(zkClientUtils.getNameSpace() + "/" + path + "/" + service[0] + ":" + service[1]);
+            String dataStr = zkClientService.readNode(zkClientService.getNameSpace() + "/" + path + "/" + service[0] + ":" + service[1]);
             // 为空，代表是新机器加入集群，先让其执行一次
             if (dataStr == null || dataStr.indexOf("&")==-1) {
                 return service;
@@ -53,7 +53,7 @@ public class ResponseTimeRpcLoadBalancing implements RpcLoadBalancing {
                 // 判断当前时间和当前时间的差值，如果大于阀值，则清空，循环下一个
                 if (l > TIME) {
                     // 使用redis 懒删除策略
-                    zkClientUtils.updataNode(zkClientUtils.getNameSpace() + "/" + path + "/" + service[0] + ":" + service[1], "");
+                    zkClientService.updataNode(zkClientService.getNameSpace() + "/" + path + "/" + service[0] + ":" + service[1], "");
                     continue;
                 }
                 i = i1;

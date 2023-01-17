@@ -11,9 +11,9 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.string.StringDecoder;
 import io.netty.handler.codec.string.StringEncoder;
-import org.hu.rpc.common.RpcResponse;
+import org.hu.rpc.common.entity.RpcResponse;
+import org.hu.rpc.common.service.ThreadPoolService;
 import org.hu.rpc.config.NettyClientConfig;
-import org.hu.rpc.util.ThreadPoolUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -115,7 +115,7 @@ public class NettyRpcClient {
      */
     public RpcResponse send(String request) throws ExecutionException, InterruptedException {
         rpcClientHandler.setRequest(request);
-        Future<String> submit = ThreadPoolUtil.poolExecutor().submit(rpcClientHandler);
+        Future<String> submit = ThreadPoolService.poolExecutor().submit(rpcClientHandler);
         String response = submit.get();
 
         return JSON.parseObject(response, RpcResponse.class);

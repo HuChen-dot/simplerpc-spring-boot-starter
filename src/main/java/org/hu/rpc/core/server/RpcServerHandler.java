@@ -6,8 +6,8 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import org.hu.rpc.annotation.RpcAutowired;
 import org.hu.rpc.annotation.RpcService;
-import org.hu.rpc.common.RpcRequest;
-import org.hu.rpc.common.RpcResponse;
+import org.hu.rpc.common.entity.RpcRequest;
+import org.hu.rpc.common.entity.RpcResponse;
 import org.hu.rpc.exception.SimpleRpcException;
 import org.hu.rpc.proxy.JdkProxy;
 import org.slf4j.Logger;
@@ -32,9 +32,9 @@ import java.util.concurrent.ConcurrentHashMap;
 @Component
 // @ChannelHandler.Sharable 这个注解代表，当前这个处理类，可以被多个通道共享
 @ChannelHandler.Sharable
-public class RpctServerHandler extends SimpleChannelInboundHandler<String> implements ApplicationContextAware {
+public class RpcServerHandler extends SimpleChannelInboundHandler<String> implements ApplicationContextAware {
 
-    Logger log = LoggerFactory.getLogger(RpctServerHandler.class);
+    Logger log = LoggerFactory.getLogger(RpcServerHandler.class);
 
     /**
      * 用来存储 被标记了@RpcService 注解的bean

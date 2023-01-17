@@ -1,4 +1,4 @@
-package org.hu.rpc.common;
+package org.hu.rpc.common.entity;
 
 
 

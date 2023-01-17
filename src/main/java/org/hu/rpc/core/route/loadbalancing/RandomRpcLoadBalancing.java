@@ -3,6 +3,7 @@ package org.hu.rpc.core.route.loadbalancing;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.Random;
 
 /**
  * @Author: hu.chen
@@ -12,7 +13,7 @@ import java.util.List;
 @Component
 public class RandomRpcLoadBalancing implements RpcLoadBalancing{
 
-
+    private Random random = new Random(System.currentTimeMillis());
     /**
      * 随机的负载均衡
      * @param services
@@ -21,7 +22,7 @@ public class RandomRpcLoadBalancing implements RpcLoadBalancing{
     @Override
     public String[] load(List<String[]> services,String path) {
         // 此处负载均衡策略为随机
-        int i = (int) (System.currentTimeMillis() % services.size());
-        return services.get(i);
+        int value = random.nextInt(services.size());
+        return services.get(value);
     }
 }

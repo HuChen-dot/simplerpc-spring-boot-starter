@@ -4,7 +4,7 @@ import org.hu.rpc.config.NettyClientConfig;
 import org.hu.rpc.core.route.loadbalancing.*;
 import org.hu.rpc.exception.SimpleRpcException;
 import org.hu.rpc.util.BeanUtils;
-import org.hu.rpc.zk.util.ZkClientUtils;
+import org.hu.rpc.register.zk.util.ZkClientService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -30,12 +30,12 @@ public class RouteStrategy {
 
 
     @Autowired
-    private ZkClientUtils zkClientUtils;
+    private ZkClientService zkClientService;
 
     public String[] getHostAndPort(String path) {
         if (mapAddress.size() == 0) {
             // 如果为空，并且zk注册中心是启用状态，则代表还没有可以使用的服务
-            if (zkClientUtils.isOpenzk()) {
+            if (zkClientService.isOpenzk()) {
                 throw new SimpleRpcException("没有可以使用的服务");
             }
             synchronized (this) {

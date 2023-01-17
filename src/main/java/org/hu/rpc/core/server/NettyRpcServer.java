@@ -8,7 +8,7 @@ import io.netty.handler.codec.string.StringDecoder;
 import io.netty.handler.codec.string.StringEncoder;
 import io.netty.handler.logging.LoggingHandler;
 import org.hu.rpc.config.NettyServerConfig;
-import org.hu.rpc.zk.server.ServerInit;
+import org.hu.rpc.register.zk.server.ZkRegisterInit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -49,10 +49,10 @@ public class NettyRpcServer implements Runnable {
     private NettyServerConfig nettyServerConfig;
 
     @Autowired
-    private RpctServerHandler rpctServerHandler;
+    private RpcServerHandler rpcServerHandler;
 
     @Autowired
-    private ServerInit serverInit;
+    private ZkRegisterInit zkRegisterInit;
 
 
     private NioEventLoopGroup bossGroup = null;
@@ -103,14 +103,14 @@ public class NettyRpcServer implements Runnable {
                             channel.pipeline().addLast(new StringEncoder());
 
                             // 添加自定义处理 hangler
-                            pipeline.addLast(rpctServerHandler);
+                            pipeline.addLast(rpcServerHandler);
                         }
                     });
 
                     // 绑定端口,同时将异步修改成同步
                     ChannelFuture channelFuture = serverBootstrap.bind(nettyServerConfig.getPort()).sync();
                     // 启动 zk 注册中心
-                    serverInit.init(nettyServerConfig.getPort());
+                    zkRegisterInit.init(nettyServerConfig.getPort());
 
                     log.info("Netty server running.....");
 

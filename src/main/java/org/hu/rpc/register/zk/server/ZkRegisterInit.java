@@ -1,8 +1,8 @@
-package org.hu.rpc.zk.server;
+package org.hu.rpc.register.zk.server;
 
-import org.hu.rpc.core.server.RpctServerHandler;
+import org.hu.rpc.core.server.RpcServerHandler;
 import org.hu.rpc.util.IpUtils;
-import org.hu.rpc.zk.util.ZkClientUtils;
+import org.hu.rpc.register.zk.util.ZkClientService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -15,35 +15,35 @@ import java.util.List;
  * @DateTime: 2021/12/29 1:15 PM
  **/
 @Component
-public class ServerInit {
+public class ZkRegisterInit {
 
 
     @Autowired
-    private ZkClientUtils zkClientUtils;
+    private ZkClientService zkClientService;
 
     @Autowired
-    private  RpctServerHandler rpctServerHandler;
+    private RpcServerHandler rpcServerHandler;
 
 
     public void init(int port) {
         // 是否使用了 zk
-        if (!zkClientUtils.isOpenzk()) {
+        if (!zkClientService.isOpenzk()) {
             return;
         }
 
         // 获取根路径
-        String namespace = zkClientUtils.getNameSpace();
+        String namespace = zkClientService.getNameSpace();
 
         // 判断根路径是否存在
-        if (!zkClientUtils.exists(namespace)) {
+        if (!zkClientService.exists(namespace)) {
             // 如果不存在 则创建节点
-            zkClientUtils.createPersistent(namespace);
+            zkClientService.createPersistent(namespace);
         }
 
         //获取当前服务的 ip
         String localIpAddr = IpUtils.getLocalIpAddr();
 
-        List<Class> interfaceApi = rpctServerHandler.interfaceApi;
+        List<Class> interfaceApi = rpcServerHandler.interfaceApi;
 
 
         for (Class aClass : interfaceApi) {
@@ -52,14 +52,14 @@ public class ServerInit {
             String servicePath=namespace+"/"+aClass.getName();
 
             // 判断当前节点是否存在
-            if(!zkClientUtils.exists(servicePath)) {
+            if(!zkClientService.exists(servicePath)) {
                 // 在zk上创建当前微服务的节点信息
-                zkClientUtils.createPersistent(servicePath);
+                zkClientService.createPersistent(servicePath);
             }
             String ipPath=servicePath + "/" + localIpAddr + ":" + port;
 
             //将当前服务的ip:端口，注册到根节点/当前微服务节点下,创建成临时节点
-            zkClientUtils.createEphemeral(ipPath);
+            zkClientService.createEphemeral(ipPath);
         }
 
     }
@@ -69,8 +69,8 @@ public class ServerInit {
      */
     @PreDestroy
     public void close(){
-        if (zkClientUtils.isOpenzk()) {
-            zkClientUtils.close();
+        if (zkClientService.isOpenzk()) {
+            zkClientService.close();
         }
     }
 

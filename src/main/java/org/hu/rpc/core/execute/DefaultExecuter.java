@@ -1,8 +1,8 @@
 package org.hu.rpc.core.execute;
 
 import com.alibaba.fastjson.JSON;
-import org.hu.rpc.common.RpcRequest;
-import org.hu.rpc.common.RpcResponse;
+import org.hu.rpc.common.entity.RpcRequest;
+import org.hu.rpc.common.entity.RpcResponse;
 import org.hu.rpc.config.NettyClientConfig;
 import org.hu.rpc.core.client.NettyRpcClient;
 import org.hu.rpc.core.route.RouteStrategy;

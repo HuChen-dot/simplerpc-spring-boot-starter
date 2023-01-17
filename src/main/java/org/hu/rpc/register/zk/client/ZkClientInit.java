@@ -1,10 +1,10 @@
-package org.hu.rpc.zk.client;
+package org.hu.rpc.register.zk.client;
 
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent;
 import org.apache.curator.framework.recipes.cache.PathChildrenCacheListener;
 import org.hu.rpc.core.route.RouteStrategy;
-import org.hu.rpc.zk.util.ZkClientUtils;
+import org.hu.rpc.register.zk.util.ZkClientService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -20,10 +20,10 @@ import static org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent.
  * @DateTime: 2021/12/29 1:36 PM
  **/
 @Component
-public class CilentInit {
+public class ZkClientInit {
 
     @Autowired
-    private ZkClientUtils zkClientUtils;
+    private ZkClientService zkClientService;
 
     @Autowired
     private  RouteStrategy routeStrategy;
@@ -33,27 +33,27 @@ public class CilentInit {
     @PostConstruct
     public void init() {
         // 是否使用了 zk
-        if (!zkClientUtils.isOpenzk()) {
+        if (!zkClientService.isOpenzk()) {
             return;
         }
 
         // 获取根路径
-        String namespace = zkClientUtils.getNameSpace();
+        String namespace = zkClientService.getNameSpace();
 
         // 判断根路径是否存在
-        if (!zkClientUtils.exists(namespace)) {
+        if (!zkClientService.exists(namespace)) {
             // 如果不存在 则创建节点
-            zkClientUtils.createPersistent(namespace);
+            zkClientService.createPersistent(namespace);
         }
         Map<String, List<String[]>> mapAddress = routeStrategy.getMapAddress();
 
-        zkClientUtils.addNodeListener(namespace, new PathChildrenCacheListener() {
+        zkClientService.addNodeListener(namespace, new PathChildrenCacheListener() {
             @Override
             public void childEvent(CuratorFramework curatorFramework, PathChildrenCacheEvent pathChildrenCacheEvent) throws Exception {
 
                 if(CHILD_ADDED==pathChildrenCacheEvent.getType()||CHILD_REMOVED==pathChildrenCacheEvent.getType()){
 
-                    List<String> nodes = zkClientUtils.getNodes(namespace);
+                    List<String> nodes = zkClientService.getNodes(namespace);
 
                     // 给根节点的新添加的子节点创建监听
                     addNodeListener(nodes, namespace, mapAddress);
@@ -63,7 +63,7 @@ public class CilentInit {
         });
 
         // 获取根路径下的子节点
-        List<String> childNodes = zkClientUtils.getNodes(namespace);
+        List<String> childNodes = zkClientService.getNodes(namespace);
 
         addNodeListener(childNodes, namespace, mapAddress);
     }
@@ -83,14 +83,14 @@ public class CilentInit {
             }
             String path = namespace + "/" + childNode;
 
-            List<String> ipNodes = zkClientUtils.getNodes(path);
+            List<String> ipNodes = zkClientService.getNodes(path);
 
-            zkClientUtils.addNodeListener(path, new PathChildrenCacheListener() {
+            zkClientService.addNodeListener(path, new PathChildrenCacheListener() {
                 @Override
                 public void childEvent(CuratorFramework curatorFramework, PathChildrenCacheEvent pathChildrenCacheEvent) throws Exception {
 
                     if(CHILD_ADDED==pathChildrenCacheEvent.getType()||CHILD_REMOVED==pathChildrenCacheEvent.getType()){
-                        List<String> list = zkClientUtils.getNodes(path);
+                        List<String> list = zkClientService.getNodes(path);
 
                         Map<String, List<String[]>> mapAddress1 = routeStrategy.getMapAddress();
                         List<String[]> ipArray = new ArrayList<>();

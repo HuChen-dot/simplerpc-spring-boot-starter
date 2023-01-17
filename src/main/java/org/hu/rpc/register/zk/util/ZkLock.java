@@ -1,4 +1,4 @@
-package org.hu.rpc.zk.util;
+package org.hu.rpc.register.zk.util;
 
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent;
@@ -30,7 +30,7 @@ public class ZkLock {
     private static CountDownLatch countDownLatch = new CountDownLatch(1);
 
     @Autowired
-    private ZkClientUtils zkClientUtils;
+    private ZkClientService zkClientService;
 
     /**
      * 是否第一次运行
@@ -53,10 +53,10 @@ public class ZkLock {
                     throw new Exception();
                 }
                 // 创建锁的临时节点
-                zkClientUtils.createEphemeral(zkClientUtils.getNameSpace() + ROOT_NODE + LOCK_NODE);
+                zkClientService.createEphemeral(zkClientService.getNameSpace() + ROOT_NODE + LOCK_NODE);
                 return;
             } catch (Exception e) {
-                zkClientUtils.addNodeListener(zkClientUtils.getNameSpace() + ROOT_NODE, new PathChildrenCacheListener() {
+                zkClientService.addNodeListener(zkClientService.getNameSpace() + ROOT_NODE, new PathChildrenCacheListener() {
                     @Override
                     public void childEvent(CuratorFramework curatorFramework, PathChildrenCacheEvent pathChildrenCacheEvent) throws Exception {
 
@@ -92,8 +92,8 @@ public class ZkLock {
         if (isOenRun) {
             synchronized (ZkLock.class) {
                 if (isOenRun) {
-                    if (!zkClientUtils.exists(zkClientUtils.getNameSpace() + ROOT_NODE)) {
-                        zkClientUtils.createPersistent(zkClientUtils.getNameSpace() + ROOT_NODE);
+                    if (!zkClientService.exists(zkClientService.getNameSpace() + ROOT_NODE)) {
+                        zkClientService.createPersistent(zkClientService.getNameSpace() + ROOT_NODE);
                     }
                     // 注册在虚拟机关闭时的回调
                     Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
@@ -102,7 +102,7 @@ public class ZkLock {
                             log.info("程序关闭，执行回调删除锁.....");
                             isRun = false;
                             //释放锁
-                            zkClientUtils.delete(zkClientUtils.getNameSpace() + ROOT_NODE + LOCK_NODE);
+                            zkClientService.delete(zkClientService.getNameSpace() + ROOT_NODE + LOCK_NODE);
                         }
                     }));
                     // 状态修改
@@ -118,7 +118,7 @@ public class ZkLock {
      */
     public void unLock() {
         //释放锁
-        zkClientUtils.delete(zkClientUtils.getNameSpace() + ROOT_NODE + LOCK_NODE);
+        zkClientService.delete(zkClientService.getNameSpace() + ROOT_NODE + LOCK_NODE);
     }
 
 }

@@ -1,0 +1,13 @@
+# 核心配置：公共设置与环境选择。
+# Spring Boot 公共配置。
+spring:
+  # 应用标识配置。
+  application:
+    # 应用名称，用于标识当前进程；不会改变 RPC 接口名称或服务发现键。
+    name: simplerpc-example-client
+  # 环境选择配置，对应 application-{环境名}.yml。
+  profiles:
+    # 启用的环境：local（静态地址）、redis（Redis 注册中心）、zk（ZooKeeper 注册中心）。
+    # 读取环境变量 SPRING_PROFILES_ACTIVE，未设置时使用 local；--spring.profiles.active 启动参数优先。
+    # 服务端和客户端应选择相同环境；每次选择一个环境。
+    active: ${SPRING_PROFILES_ACTIVE:local}

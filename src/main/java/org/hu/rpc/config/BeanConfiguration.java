@@ -1,6 +1,7 @@
 package org.hu.rpc.config;
 
 
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
@@ -12,6 +13,7 @@ import org.springframework.context.annotation.Configuration;
  * @DateTime: 2021/12/26 7:03 PM
  **/
 @Configuration
+@EnableConfigurationProperties
 @ComponentScan({"org.hu.rpc"})
 public class BeanConfiguration{
 

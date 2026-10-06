@@ -1,7 +1,9 @@
 package org.hu.rpc.proxy;
 
 import org.hu.rpc.config.NettyClientConfig;
-import org.hu.rpc.core.execute.DefaultExecuter;
+import org.hu.rpc.core.execute.RpcInvocationHandler;
+import org.hu.rpc.core.client.RpcClientTransport;
+import org.hu.rpc.exception.SimpleRpcException;
 import org.hu.rpc.core.route.RouteStrategy;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -22,7 +24,14 @@ public class JdkProxy {
     @Autowired
     private RouteStrategy routeStrategy;
 
-    public Object createProxy(Class clazz) {
-        return Proxy.newProxyInstance(JdkProxy.class.getClassLoader(), new Class[]{clazz}, new DefaultExecuter(nettyClientConfig,routeStrategy));
+    @Autowired
+    private RpcClientTransport transport;
+
+    public Object createProxy(Class<?> clazz) {
+        if (!clazz.isInterface()) {
+            throw new SimpleRpcException("RPC 代理类型必须是接口：" + clazz.getName());
+        }
+        return Proxy.newProxyInstance(clazz.getClassLoader(), new Class<?>[]{clazz},
+                new RpcInvocationHandler(nettyClientConfig, routeStrategy, clazz, transport));
     }
 }

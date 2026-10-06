@@ -3,171 +3,144 @@ package org.hu.rpc.core.server;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.channel.group.ChannelGroup;
+import io.netty.channel.group.DefaultChannelGroup;
+import io.netty.handler.codec.json.JsonObjectDecoder;
 import io.netty.handler.codec.string.StringDecoder;
 import io.netty.handler.codec.string.StringEncoder;
+import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
+import io.netty.util.concurrent.DefaultEventExecutorGroup;
+import io.netty.util.concurrent.GlobalEventExecutor;
 import org.hu.rpc.config.NettyServerConfig;
+import org.hu.rpc.exception.SimpleRpcException;
 import org.hu.rpc.register.zk.server.ZkRegisterInit;
+import org.hu.rpc.register.redis.RedisRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 
 import javax.annotation.PreDestroy;
+import java.net.InetSocketAddress;
+import java.nio.charset.StandardCharsets;
+import java.util.Locale;
+import java.util.concurrent.TimeUnit;
 
-/**
- * @Author: hu.chen
- * @Description:
- * @DateTime: 2021/12/26 6:43 PM
- **/
-@EnableConfigurationProperties(NettyRpcServer.class)
-@ConfigurationProperties(prefix = "simplerpc.server.threadpoll")
+@ConfigurationProperties(prefix = "simplerpc.server.thread-pool")
 @Configuration
-public class NettyRpcServer implements Runnable {
-    Logger log = LoggerFactory.getLogger(NettyRpcServer.class);
-
-
-    /**
-     * 连接处理线程数
-     */
-    private int bossGroupSize = 5;
-
-    /**
-     * 读写处理线程数
-     */
-    private int workerGroupSize = 200;
-
-    /**
-     * 服务端bossGroup 的等待队列大小
-     */
-    private int bossGroupQueueSize = 1024;
-
+public class NettyRpcServer {
+    private static final Logger log = LoggerFactory.getLogger(NettyRpcServer.class);
+    private int bossGroupSize = 1;
+    private int workerGroupSize = Math.min(4, Runtime.getRuntime().availableProcessors());
+    private int backlog = 1024;
     @Autowired
     private NettyServerConfig nettyServerConfig;
-
     @Autowired
     private RpcServerHandler rpcServerHandler;
-
     @Autowired
     private ZkRegisterInit zkRegisterInit;
+    @Autowired
+    private RedisRegistry redisRegistry;
+    private NioEventLoopGroup bossGroup;
+    private NioEventLoopGroup workerGroup;
+    private DefaultEventExecutorGroup businessGroup;
+    private Channel serverChannel;
+    private final ChannelGroup connections = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
+    private boolean destroyed;
 
-
-    private NioEventLoopGroup bossGroup = null;
-
-    private NioEventLoopGroup workerGroup = null;
-
-    private static Object lock = new Object();
-
-    @Override
-    public void run() {
-        if (!nettyServerConfig.isIsrun()) {
+    /** 绑定端口后返回；绑定失败直接使 Spring 启动失败。 */
+    public synchronized void start() {
+        if (!nettyServerConfig.isEnabled()) {
             return;
         }
-        synchronized (lock) {
-            if (bossGroup == null) {
-                try {
-                    // 创建连接线程组
-                    bossGroup = new NioEventLoopGroup(bossGroupSize);
-                    // 创建 工作线程组
-                    workerGroup = new NioEventLoopGroup(workerGroupSize);
-
-                    // 创建服务端启动助手
-                    ServerBootstrap serverBootstrap = new ServerBootstrap();
-
-                    // 关联线程组
-                    serverBootstrap.group(bossGroup, workerGroup);
-                    // 设置服务端通道为Nio
-                    serverBootstrap.channel(NioServerSocketChannel.class);
-
-                    //6：设置相应的参数--设置bossGroup 等待队列的大小
-                    serverBootstrap.option(ChannelOption.SO_BACKLOG, bossGroupQueueSize);
-
-                    //6：设置相应的参数--设置workerGroup 开启连接的探活
-                    serverBootstrap.childOption(ChannelOption.SO_KEEPALIVE, true);
-
-                    // 设置 日志打印级别
-                    serverBootstrap.handler(new LoggingHandler(nettyServerConfig.getLoglevel()));
-
-                    // 绑定通道初始化对象
-                    serverBootstrap.childHandler(new ChannelInitializer() {
+        if (destroyed) {
+            throw new SimpleRpcException("RPC 服务端已关闭");
+        }
+        if (serverChannel != null) { return; }
+        try {
+            bossGroup = new NioEventLoopGroup(bossGroupSize);
+            workerGroup = new NioEventLoopGroup(workerGroupSize);
+            businessGroup = new DefaultEventExecutorGroup(Math.max(2, workerGroupSize));
+            ServerBootstrap bootstrap = new ServerBootstrap();
+            bootstrap.group(bossGroup, workerGroup).channel(NioServerSocketChannel.class)
+                    .option(ChannelOption.SO_BACKLOG, backlog)
+                    .childOption(ChannelOption.SO_KEEPALIVE, true)
+                    .handler(new LoggingHandler(LogLevel.valueOf(nettyServerConfig.getLogLevel().toUpperCase(Locale.ROOT))))
+                    .childHandler(new ChannelInitializer<SocketChannel>() {
                         @Override
-                        protected void initChannel(Channel channel) throws Exception {
-                            // 获取 ChannelPipeline 用于注册编码器和自定义业务处理类
-                            ChannelPipeline pipeline = channel.pipeline();
-
-                            // 设置编解码器
-                            channel.pipeline().addLast(new StringDecoder());
-                            channel.pipeline().addLast(new StringEncoder());
-
-                            // 添加自定义处理 hangler
-                            pipeline.addLast(rpcServerHandler);
+                        protected void initChannel(SocketChannel channel) {
+                            connections.add(channel);
+                            channel.pipeline().addLast(new JsonObjectDecoder(16 * 1024 * 1024));
+                            channel.pipeline().addLast(new StringDecoder(StandardCharsets.UTF_8));
+                            channel.pipeline().addLast(new StringEncoder(StandardCharsets.UTF_8));
+                            channel.pipeline().addLast(businessGroup, rpcServerHandler);
                         }
                     });
-
-                    // 绑定端口,同时将异步修改成同步
-                    ChannelFuture channelFuture = serverBootstrap.bind(nettyServerConfig.getPort()).sync();
-                    // 启动 zk 注册中心
-                    zkRegisterInit.init(nettyServerConfig.getPort());
-
-                    log.info("Netty server running.....");
-
-                    //关闭通道--(并不是真正意义上的关闭，而是监听通道关闭的状态）
-                    channelFuture.channel().closeFuture().sync();
-                } catch (InterruptedException e) {
-                    log.error("发生异常，关闭资源：{}",e);
-                    //11: 关闭连接池
-                    bossGroup.shutdownGracefully();
-                    workerGroup.shutdownGracefully();
-                } finally {
-                    log.info("最终关闭资源");
-                    //11: 关闭连接池
-                    bossGroup.shutdownGracefully();
-                    workerGroup.shutdownGracefully();
-                }
+            ChannelFuture binding = bootstrap.bind(nettyServerConfig.getPort());
+            serverChannel = binding.channel();
+            binding.sync();
+            int port = ((InetSocketAddress) serverChannel.localAddress()).getPort();
+            if (redisRegistry.isEnabled()) {
+                redisRegistry.register(port, rpcServerHandler.interfaceApi);
+            } else {
+                zkRegisterInit.init(port);
             }
+            log.info("RPC 服务端启动：{}", serverChannel.localAddress());
+        } catch (InterruptedException e) {
+            destroy();
+            Thread.currentThread().interrupt();
+            throw new SimpleRpcException("RPC 服务端启动被中断", e);
+        } catch (Exception e) {
+            destroy();
+            throw new SimpleRpcException("RPC 服务端启动失败", e);
         }
     }
-
 
     @PreDestroy
-    public void destroy() {
-        if (bossGroup != null) {
-            log.info("bossGroup销毁");
-            bossGroup.shutdownGracefully();
+    public synchronized void destroy() {
+        if (destroyed) { return; }
+        destroyed = true;
+        if (serverChannel != null) {
+            serverChannel.close().syncUninterruptibly();
+        }
+        connections.close().awaitUninterruptibly();
+        try {
+            zkRegisterInit.close();
+        } catch (RuntimeException e) {
+            log.warn("注销服务失败，继续关闭网络资源", e);
+        }
+        if (redisRegistry.isEnabled()) {
+            try { redisRegistry.close(); }
+            catch (RuntimeException e) { log.warn("注销 Redis 服务失败，继续关闭网络资源", e); }
+        }
+        if (businessGroup != null) {
+            businessGroup.shutdownGracefully(0, 5, TimeUnit.SECONDS).syncUninterruptibly();
         }
         if (workerGroup != null) {
-            log.info("workerGroup销毁");
-            workerGroup.shutdownGracefully();
+            workerGroup.shutdownGracefully(0, 5, TimeUnit.SECONDS).syncUninterruptibly();
+        }
+        if (bossGroup != null) {
+            bossGroup.shutdownGracefully(0, 5, TimeUnit.SECONDS).syncUninterruptibly();
         }
     }
 
-
-    public int getBossGroupSize() {
-        return bossGroupSize;
-    }
-
+    public int getBossGroupSize() { return bossGroupSize; }
     public void setBossGroupSize(int bossGroupSize) {
+        if (bossGroupSize <= 0) { throw new IllegalArgumentException("bossGroupSize 必须大于 0"); }
         this.bossGroupSize = bossGroupSize;
     }
-
-    public int getWorkerGroupSize() {
-        return workerGroupSize;
-    }
-
+    public int getWorkerGroupSize() { return workerGroupSize; }
     public void setWorkerGroupSize(int workerGroupSize) {
+        if (workerGroupSize < 0) { throw new IllegalArgumentException("workerGroupSize 不能为负数"); }
         this.workerGroupSize = workerGroupSize;
     }
-
-    public int getBossGroupQueueSize() {
-        return bossGroupQueueSize;
+    public int getBacklog() { return backlog; }
+    public void setBacklog(int backlog) {
+        if (backlog <= 0) { throw new IllegalArgumentException("backlog 必须大于 0"); }
+        this.backlog = backlog;
     }
-
-    public void setBossGroupQueueSize(int bossGroupQueueSize) {
-        this.bossGroupQueueSize = bossGroupQueueSize;
-    }
-
-
 }

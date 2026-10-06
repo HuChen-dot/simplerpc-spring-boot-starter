@@ -1,0 +1,25 @@
+# 排查发现
+
+- 初始工作区无未提交改动，项目有 31 个 Java 源文件，无测试。
+- Java 8 / Spring Boot 2.4.1 / Netty 4.1.69 / Curator 2.12.0。
+- README 尚无配置和使用说明。
+- 原始编译通过（Java 8 / Maven 3.5.3）。
+- TCP 仅使用 StringDecoder，无 JSON 消息分帧，分包/粘包会破坏请求和响应解析。
+- 客户端用共享 request/response + wait/notify，缺少请求关联和响应超时；每次调用新建 5 个网络线程。
+- 轮询计数非原子且只在 count == size 时归零；节点缩容或并发会索引越界。
+- 服务端 getDeclaredMethod 不支持继承方法，且 JSON 入参未按接口类型转换。
+- 代理把 Object 方法也发到远端；仅凭字符串外形转换响应，泛型和基本类型易失败。
+- 服务端在 ApplicationContextAware 中获取全部 Bean，可能导致初始化循环，且只注册第一个直接接口。
+- ZkLock 创建临时节点失败被吞掉，可能把未获取锁当作成功；共享 latch 和监听器可能死锁/泄漏。
+- ZooKeeper 监听先启动后添加回调，缓存未关闭，发现列表用非线程安全 Set。
+- Fastjson 官方确认 1.2.68–1.2.83 存在反序列化漏洞，兼容修复版本为 1.2.84；使用独立 SafeMode 并避免从网络加载 Class。
+- 已验证原代码缺陷的修复：请求关联、超时、继承/泛型 DTO 转换、业务错误、方法暴露边界、按服务独立轮询。
+- 已验证本地真实网络和临时 ZooKeeper：大消息、并发乱序、锁竞争、节点重建、会话过期自动注册恢复。
+- Redis 设计：type 显式配置优先于旧 openzk 开关；独立 TTL 租约、所有者 token、Lua 原子续期/注销；地址索引也设置过期时间，避免无消费者时残留。
+- 首次 Redis 编译发现原 interfaceApi 使用 List<Class>，改为 List<Class<?>> 与新注册方法类型一致。
+- 当前机器没有 Redis 服务端，将在临时目录编译测试用 Redis；不修改系统安装或已有数据。
+- Redis 4 项配置测试 + 7 项真实集成测试通过，含密码 URI、多个提供者、异常过期、旧 owner 隔离、Redis 重启及 Spring RPC/三种负载均衡。
+- 示例采用 examples/pom.xml 聚合当前根目录 Starter 与 server/client 两个新模块，保留原根目录 JAR 构建；接口源码在 shared 中共用，不增加第三个示例模块。
+- 示例业务包置于 org.hu.simplerpc.example 下，避免 Starter 的 org.hu.rpc 扫描范围扫描另一端业务类。
+- 最新要求按新项目开发：统一 registry.type；删除旧开关/推导规则、旧代理构造和独立客户端线程组备用路径、闲置静态 Bean/线程池/JSON 判断工具、旧可变状态入口；配置改为 enabled、thread-pool、log-level、connect-timeout、request-timeout、load-balancing 和 backlog，不保留别名。
+- ZooKeeper 更新与锁释放方法统一为 updateNode/unlock；调用处理器命名为 RpcInvocationHandler；响应耗时记录使用毫秒时间戳，删除日期字符串格式处理和闲置排序工具。

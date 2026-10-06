@@ -7,10 +7,9 @@
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
         <module name="simplerpc-spring-boot-starter" />
+        <module name="simplerpc-example-client" />
+        <module name="simplerpc-example-server" />
       </profile>
     </annotationProcessing>
-    <bytecodeTargetLevel>
-      <module name="simplerpc-spring-boot-starter" target="8" />
-    </bytecodeTargetLevel>
   </component>
 </project>

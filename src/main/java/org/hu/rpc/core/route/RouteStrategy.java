@@ -3,98 +3,89 @@ package org.hu.rpc.core.route;
 import org.hu.rpc.config.NettyClientConfig;
 import org.hu.rpc.core.route.loadbalancing.*;
 import org.hu.rpc.exception.SimpleRpcException;
-import org.hu.rpc.util.BeanUtils;
 import org.hu.rpc.register.zk.util.ZkClientService;
+import org.hu.rpc.register.redis.RedisRegistry;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * @Author: hu.chen
- * @Description: 路由策略
- * @DateTime: 2021/12/31 5:22 PM
- **/
 @Component
 public class RouteStrategy {
-
-
     @Autowired
     private NettyClientConfig nettyClientConfig;
-
-    private Map<String, List<String[]>> mapAddress = new ConcurrentHashMap<>();
-
-
     @Autowired
     private ZkClientService zkClientService;
+    @Autowired
+    private RedisRegistry redisRegistry;
+    @Autowired
+    private DefaultRpcLoadBalancing polling;
+    @Autowired
+    private RandomRpcLoadBalancing random;
+    @Autowired
+    private ResponseTimeRpcLoadBalancing responseTime;
+    private final Map<String, List<String[]>> mapAddress = new ConcurrentHashMap<>();
 
     public String[] getHostAndPort(String path) {
-        if (mapAddress.size() == 0) {
-            // 如果为空，并且zk注册中心是启用状态，则代表还没有可以使用的服务
-            if (zkClientService.isOpenzk()) {
-                throw new SimpleRpcException("没有可以使用的服务");
-            }
-            synchronized (this) {
-                if (mapAddress.size() == 0) {
-
-                    // 获取用户的配置
-                    Map<String, String> address = nettyClientConfig.getAddress();
-
-                    Set<Map.Entry<String, String>> entries = address.entrySet();
-
-                    for (Map.Entry<String, String> entry : entries) {
-                        String value = entry.getValue();
-                        String[] split = value.split("&");
-
-                        List<String[]> list = new ArrayList<>();
-                        for (String server : split) {
-                            list.add(server.split(":"));
-                        }
-                        mapAddress.put(entry.getKey(), list);
-                    }
-                }
-            }
-        }
         List<String[]> services = mapAddress.get(path);
-        if (services == null || services.size() == 0) {
-            throw new SimpleRpcException("没有可以提供服务的服务者");
-        }
-        RpcLoadBalancing rpcLoadBalancing = getRpcLoadBalancing();
-        return rpcLoadBalancing.load(services, path);
-    }
-
-
-    /**
-     * 简单工厂模式获取负载均衡实现
-     *
-     * @return
-     */
-    private RpcLoadBalancing getRpcLoadBalancing() {
-        switch (nettyClientConfig.getLoadbalancing()) {
-            case LoadBalancingConst.POLLING: {
-                return BeanUtils.getBean(DefaultRpcLoadBalancing.class);
-            }
-            case LoadBalancingConst.RANDOM: {
-                return BeanUtils.getBean(RandomRpcLoadBalancing.class);
-            }
-            default: {
-                return BeanUtils.getBean(DefaultRpcLoadBalancing.class);
-
+        if (redisRegistry.isEnabled()) {
+            services = redisRegistry.discover(path);
+            mapAddress.put(path, services);
+        } else if ((services == null || services.isEmpty()) && !zkClientService.isEnabled()) {
+            String address = nettyClientConfig.getAddress().get(path);
+            if (address != null) {
+                services = new ArrayList<>();
+                for (String server : address.split("&", -1)) {
+                    services.add(parseAddress(server));
+                }
+                services = Collections.unmodifiableList(services);
+                mapAddress.put(path, services);
             }
         }
+        if (services == null || services.isEmpty()) {
+            throw new SimpleRpcException("没有可以提供服务的服务者：" + path);
+        }
+        RpcLoadBalancing strategy = polling;
+        if (LoadBalancingConst.RANDOM.equals(nettyClientConfig.getLoadBalancing())) {
+            strategy = random;
+        } else if (LoadBalancingConst.RESPONSE_TIME.equals(nettyClientConfig.getLoadBalancing())) {
+            strategy = responseTime;
+        }
+        return strategy.load(services, path);
     }
 
-    public Map<String, List<String[]>> getMapAddress() {
-        return mapAddress;
+    /** 支持 host:port 和 [IPv6]:port，拒绝残缺地址。 */
+    public static String[] parseAddress(String address) {
+        String value = address == null ? "" : address.trim();
+        int separator = value.lastIndexOf(':');
+        if (separator <= 0 || separator == value.length() - 1) {
+            throw new SimpleRpcException("无效的 RPC 服务地址：" + address);
+        }
+        String host = value.substring(0, separator);
+        if (host.startsWith("[") && host.endsWith("]")) {
+            host = host.substring(1, host.length() - 1);
+        } else if (host.indexOf(':') >= 0) {
+            throw new SimpleRpcException("IPv6 地址必须使用 [host]:port：" + address);
+        }
+        try {
+            int port = Integer.parseInt(value.substring(separator + 1));
+            if (host.isEmpty() || port < 1 || port > 65535) {
+                throw new NumberFormatException();
+            }
+            return new String[]{host, String.valueOf(port)};
+        } catch (NumberFormatException e) {
+            throw new SimpleRpcException("无效的 RPC 服务地址：" + address, e);
+        }
     }
 
-    public void setMapAddress(Map<String, List<String[]>> mapAddress) {
-        this.mapAddress = mapAddress;
-    }
+    public Map<String, List<String[]>> getMapAddress() { return mapAddress; }
 
+    public void recordResponseTime(String path, String[] address, long elapsedMillis) {
+        if (LoadBalancingConst.RESPONSE_TIME.equals(nettyClientConfig.getLoadBalancing())
+                && (zkClientService.isEnabled() || (redisRegistry.isEnabled()))) {
+            responseTime.record(path, address, elapsedMillis);
+        }
+    }
 
 }

@@ -17,4 +17,6 @@ public class LoadBalancingConst {
      */
     public static final String RANDOM="random";
 
+    public static final String RESPONSE_TIME="response-time";
+
 }

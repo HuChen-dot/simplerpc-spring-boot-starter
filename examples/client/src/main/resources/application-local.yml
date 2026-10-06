@@ -1,0 +1,33 @@
+# 本地环境：使用静态地址，无需注册中心。
+# Spring Boot 内嵌 HTTP 服务配置，与 simplerpc.server 的 RPC 服务配置不同。
+server:
+  # 客户端 HTTP 监听端口，用于访问 /greet；读取 HTTP_PORT，未设置时使用 8080。
+  port: ${HTTP_PORT:8080}
+
+# SimpleRPC 框架配置。
+simplerpc:
+  # 本进程的 RPC 服务端配置。
+  server:
+    # 是否启动本地 RPC 服务端：true 发布服务，false 仅作为消费者调用远程服务。
+    enabled: false
+  # 服务注册与发现配置；服务端和客户端必须使用相同的注册中心。
+  registry:
+    # 注册中心类型：none 使用静态地址，redis 使用 Redis，zk 使用 ZooKeeper。
+    # type 统一决定注册中心；Redis/ZooKeeper 模式只使用发现结果。
+    type: none
+  # RPC 消费者配置：连接、响应等待与服务地址选择。
+  consumer:
+    # 连接远程 RPC 服务端的超时时间，单位毫秒，必须大于 0；3000 表示 3 秒。
+    connect-timeout: 3000
+    # 等待 RPC 响应的超时时间，单位毫秒，必须大于 0；3000 表示 3 秒。
+    # 超时结束客户端等待，不会取消服务端已经开始执行的业务。
+    request-timeout: 3000
+    # 负载均衡策略：polling 轮询，random 随机，response-time 按响应耗时选择。
+    # response-time 仅支持 Redis/ZooKeeper：优先探测无有效样本的节点，再选择近 5 秒响应最快的节点。
+    load-balancing: polling
+    # 静态服务地址映射，仅 registry.type=none 时用于服务选择。
+    address:
+      # 键为双方共用接口的完整类名，方括号用于保留 Spring Map 键中的点号。
+      # 值为 RPC 服务地址：读取 RPC_ADDRESS，未设置时使用 127.0.0.1:9091。
+      # 多个服务地址以 & 分隔，例如 127.0.0.1:9091&127.0.0.1:9092。
+      "[org.hu.simplerpc.example.api.GreetingService]": "${RPC_ADDRESS:127.0.0.1:9091}"

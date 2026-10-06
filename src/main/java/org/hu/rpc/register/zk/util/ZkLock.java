@@ -1,124 +1,46 @@
 package org.hu.rpc.register.zk.util;
 
-import org.apache.curator.framework.CuratorFramework;
-import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent;
-import org.apache.curator.framework.recipes.cache.PathChildrenCacheListener;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.curator.framework.recipes.locks.InterProcessMutex;
+import org.hu.rpc.exception.SimpleRpcException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import java.util.concurrent.CountDownLatch;
-
-import static org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent.Type.CHILD_ADDED;
-import static org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent.Type.CHILD_REMOVED;
-
-/**
- * @Author: hu.chen
- * @Description: zk实现分布式锁-（排他锁）
- * @DateTime: 2021/12/30 10:05 AM
- **/
+/** 使用 Curator 的可重入分布式锁；必须在获取锁的线程释放。 */
 @Component
 public class ZkLock {
-
-  private  Logger log = LoggerFactory.getLogger(ZkLock.class);
-
-    private static final String ROOT_NODE = "/zklock";
-
-    private static final String LOCK_NODE = "/lock";
-
-    private static CountDownLatch countDownLatch = new CountDownLatch(1);
-
     @Autowired
     private ZkClientService zkClientService;
+    private volatile InterProcessMutex mutex;
 
-    /**
-     * 是否第一次运行
-     */
-    private static volatile boolean isOenRun = true;
-
-    private static volatile boolean isRun = true;
-
+    private InterProcessMutex mutex() {
+        if (mutex == null) {
+            synchronized (this) {
+                if (mutex == null) {
+                    mutex = new InterProcessMutex(zkClientService.getClient(),
+                            zkClientService.getNamespace() + "/zklock/lock");
+                }
+            }
+        }
+        return mutex;
+    }
 
     public void lock() {
-
-
-        // 在zk的一个固定根节点，创建一个临时子节点
-        // 如果根节点不存在，则创建根节点
-        check();
-        while (true) {
-            try {
-                // 如果程序不是运行状态，则抛异常
-                if (!isRun) {
-                    throw new Exception();
-                }
-                // 创建锁的临时节点
-                zkClientService.createEphemeral(zkClientService.getNameSpace() + ROOT_NODE + LOCK_NODE);
-                return;
-            } catch (Exception e) {
-                zkClientService.addNodeListener(zkClientService.getNameSpace() + ROOT_NODE, new PathChildrenCacheListener() {
-                    @Override
-                    public void childEvent(CuratorFramework curatorFramework, PathChildrenCacheEvent pathChildrenCacheEvent) throws Exception {
-
-                        if(CHILD_ADDED==pathChildrenCacheEvent.getType()||CHILD_REMOVED==pathChildrenCacheEvent.getType()){
-                            //锁被释放了
-                            countDownLatch.countDown();
-
-                        }
-                    }
-                });
-
-                //如果没有获取到锁,需要重新设置同步资源值
-                if (countDownLatch.getCount() <= 0) {
-                    countDownLatch = new CountDownLatch(1);
-                }
-
-                // 进行休眠等待
-                try {
-                    countDownLatch.await();
-                } catch (InterruptedException ex) {
-                    log.error("获取锁失败，休眠时异常：{}",e);
-                }
-            }
-        }
-
-    }
-
-
-    /**
-     * 检验参数，并设置虚拟机关闭的回调
-     */
-    private void check() {
-        if (isOenRun) {
-            synchronized (ZkLock.class) {
-                if (isOenRun) {
-                    if (!zkClientService.exists(zkClientService.getNameSpace() + ROOT_NODE)) {
-                        zkClientService.createPersistent(zkClientService.getNameSpace() + ROOT_NODE);
-                    }
-                    // 注册在虚拟机关闭时的回调
-                    Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
-                        @Override
-                        public void run() {
-                            log.info("程序关闭，执行回调删除锁.....");
-                            isRun = false;
-                            //释放锁
-                            zkClientService.delete(zkClientService.getNameSpace() + ROOT_NODE + LOCK_NODE);
-                        }
-                    }));
-                    // 状态修改
-                    isOenRun = false;
-                }
-            }
+        try {
+            mutex().acquire();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new SimpleRpcException("获取 ZooKeeper 锁被中断", e);
+        } catch (Exception e) {
+            throw new SimpleRpcException("获取 ZooKeeper 锁失败", e);
         }
     }
 
-
-    /**
-     * 释放锁
-     */
-    public void unLock() {
-        //释放锁
-        zkClientService.delete(zkClientService.getNameSpace() + ROOT_NODE + LOCK_NODE);
+    public void unlock() {
+        if (mutex == null) { throw new SimpleRpcException("当前线程未持有 ZooKeeper 锁"); }
+        try {
+            mutex.release();
+        } catch (Exception e) {
+            throw new SimpleRpcException("释放 ZooKeeper 锁失败", e);
+        }
     }
-
 }

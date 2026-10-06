@@ -1,6 +1,7 @@
 package org.hu.rpc.annotation;
 
 import java.lang.annotation.*;
+import org.springframework.stereotype.Component;
 
 /**
  * @Author: hu.chen
@@ -10,6 +11,7 @@ import java.lang.annotation.*;
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
+@Component
 public @interface RpcService {
 
 }

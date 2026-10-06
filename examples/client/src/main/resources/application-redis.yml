@@ -1,0 +1,36 @@
+# Redis 环境：通过 Redis 注册与发现服务。
+# Spring Boot 内嵌 HTTP 服务配置，与 simplerpc.server 的 RPC 服务配置不同。
+server:
+  # 客户端 HTTP 监听端口，用于访问 /greet；读取 HTTP_PORT，未设置时使用 8080。
+  port: ${HTTP_PORT:8080}
+
+# SimpleRPC 框架配置。
+simplerpc:
+  # 本进程的 RPC 服务端配置。
+  server:
+    # 是否启动本地 RPC 服务端：true 发布服务，false 仅作为消费者调用远程服务。
+    enabled: false
+  # 服务注册与发现配置；服务端和客户端必须使用相同的注册中心。
+  registry:
+    # 注册中心类型：none 使用静态地址，redis 使用 Redis，zk 使用 ZooKeeper。
+    # type 统一决定注册中心；Redis/ZooKeeper 模式只使用发现结果。
+    type: redis
+    # Redis 注册中心连接 URI；读取 REDIS_ADDRESS，未设置时使用 redis://127.0.0.1:6379/0。
+    # 末尾 /0 表示数据库编号；带密码示例：redis://:password@host:6379/0。
+    # 支持 redis://username:password@host:6379/0 和 rediss://（TLS）；用户名和密码中的特殊字符需 URI 编码。
+    # 服务端与客户端应连接同一 Redis 数据库。
+    address: "${REDIS_ADDRESS:redis://127.0.0.1:6379/0}"
+    # 服务注册租约有效期，单位毫秒；15000 表示 15 秒，范围 300～2147483647。
+    # 提供者每隔租约时长的三分之一续期；异常退出后租约到期即不再被发现。
+    # 当前客户端不发布 RPC 服务，因此不会使用此值注册或续期。
+    redis-lease-millis: 15000
+  # RPC 消费者配置：连接、响应等待与服务地址选择。
+  consumer:
+    # 连接远程 RPC 服务端的超时时间，单位毫秒，必须大于 0；3000 表示 3 秒。
+    connect-timeout: 3000
+    # 等待 RPC 响应的超时时间，单位毫秒，必须大于 0；3000 表示 3 秒。
+    # 超时结束客户端等待，不会取消服务端已经开始执行的业务。
+    request-timeout: 3000
+    # 负载均衡策略：polling 轮询，random 随机，response-time 按响应耗时选择。
+    # response-time 仅支持 Redis/ZooKeeper：优先探测无有效样本的节点，再选择近 5 秒响应最快的节点。
+    load-balancing: polling

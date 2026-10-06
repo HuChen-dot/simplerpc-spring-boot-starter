@@ -1,7 +1,6 @@
 package org.hu.rpc.config;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
 
 
 /**
@@ -9,7 +8,6 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
  * @Description: Netty 配置类
  * @DateTime: 2021/12/26 6:39 PM
  **/
-@EnableConfigurationProperties(NettyServerConfig.class)
 @ConfigurationProperties(prefix = "simplerpc.server")
 public class NettyServerConfig {
 
@@ -21,21 +19,21 @@ public class NettyServerConfig {
     /**
      * 是否运行服务端
      */
-    private boolean isrun=true;
+    private boolean enabled=true;
 
 
     /**
      * 设置日志打印级别
      */
-    private String loglevel="info";
+    private String logLevel="info";
 
 
-    public boolean isIsrun() {
-        return isrun;
+    public boolean isEnabled() {
+        return enabled;
     }
 
-    public void setIsrun(boolean isrun) {
-        this.isrun = isrun;
+    public void setEnabled(boolean enabled) {
+        this.enabled = enabled;
     }
 
     public int getPort() {
@@ -46,11 +44,11 @@ public class NettyServerConfig {
         this.port = port;
     }
 
-    public String getLoglevel() {
-        return loglevel;
+    public String getLogLevel() {
+        return logLevel;
     }
 
-    public void setLoglevel(String loglevel) {
-        this.loglevel = loglevel;
+    public void setLogLevel(String logLevel) {
+        this.logLevel = logLevel;
     }
 }

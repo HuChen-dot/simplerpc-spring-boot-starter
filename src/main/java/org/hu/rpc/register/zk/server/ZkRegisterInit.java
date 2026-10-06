@@ -1,78 +1,79 @@
 package org.hu.rpc.register.zk.server;
 
+import org.apache.curator.framework.state.ConnectionState;
+import org.apache.curator.framework.state.ConnectionStateListener;
+import org.apache.zookeeper.data.Stat;
 import org.hu.rpc.core.server.RpcServerHandler;
+import org.hu.rpc.exception.SimpleRpcException;
 import org.hu.rpc.util.IpUtils;
 import org.hu.rpc.register.zk.util.ZkClientService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.PreDestroy;
+import java.util.ArrayList;
 import java.util.List;
 
-/**
- * @Author: hu.chen
- * @Description: 服务提供者初始化
- * @DateTime: 2021/12/29 1:15 PM
- **/
 @Component
 public class ZkRegisterInit {
-
-
+    private static final Logger log = LoggerFactory.getLogger(ZkRegisterInit.class);
     @Autowired
     private ZkClientService zkClientService;
-
     @Autowired
     private RpcServerHandler rpcServerHandler;
+    private final List<String> registeredPaths = new ArrayList<>();
+    private int port;
+    private boolean closed;
+    private ConnectionStateListener reconnectListener;
 
-
-    public void init(int port) {
-        // 是否使用了 zk
-        if (!zkClientService.isOpenzk()) {
-            return;
+    public synchronized void init(int port) {
+        if (!zkClientService.isEnabled() || closed) { return; }
+        this.port = port;
+        if (reconnectListener == null) {
+            reconnectListener = (client, state) -> {
+                if (state == ConnectionState.RECONNECTED) {
+                    try { register(); } catch (RuntimeException e) { log.error("恢复 RPC 服务注册失败", e); }
+                }
+            };
+            zkClientService.getClient().getConnectionStateListenable().addListener(reconnectListener);
         }
+        register();
+    }
 
-        // 获取根路径
-        String namespace = zkClientService.getNameSpace();
-
-        // 判断根路径是否存在
-        if (!zkClientService.exists(namespace)) {
-            // 如果不存在 则创建节点
-            zkClientService.createPersistent(namespace);
-        }
-
-        //获取当前服务的 ip
-        String localIpAddr = IpUtils.getLocalIpAddr();
-
-        List<Class> interfaceApi = rpcServerHandler.interfaceApi;
-
-
-        for (Class aClass : interfaceApi) {
-
-            //拼装当前节点微服务的节点路径
-            String servicePath=namespace+"/"+aClass.getName();
-
-            // 判断当前节点是否存在
-            if(!zkClientService.exists(servicePath)) {
-                // 在zk上创建当前微服务的节点信息
-                zkClientService.createPersistent(servicePath);
+    private synchronized void register() {
+        if (closed) { return; }
+        String ip = IpUtils.getLocalIpAddr();
+        if (ip.isEmpty()) { throw new SimpleRpcException("无法获取服务注册 IP"); }
+        for (Class<?> api : rpcServerHandler.interfaceApi) {
+            String path = zkClientService.getNamespace() + "/" + api.getName() + "/" + ip + ":" + port;
+            try {
+                Stat existing = zkClientService.getClient().checkExists().forPath(path);
+                if (existing == null) {
+                    zkClientService.createEphemeral(path);
+                } else if (existing.getEphemeralOwner() != zkClientService.getClient().getZookeeperClient().getZooKeeper().getSessionId()) {
+                    throw new SimpleRpcException("服务地址已被其他进程注册：" + path);
+                }
+                if (!registeredPaths.contains(path)) { registeredPaths.add(path); }
+            } catch (Exception e) {
+                if (e instanceof InterruptedException) { Thread.currentThread().interrupt(); }
+                throw new SimpleRpcException("服务注册失败：" + path, e);
             }
-            String ipPath=servicePath + "/" + localIpAddr + ":" + port;
-
-            //将当前服务的ip:端口，注册到根节点/当前微服务节点下,创建成临时节点
-            zkClientService.createEphemeral(ipPath);
         }
-
     }
 
-    /**
-     * 容器关闭时，关闭和zk服务器的连接
-     */
     @PreDestroy
-    public void close(){
-        if (zkClientService.isOpenzk()) {
-            zkClientService.close();
+    public synchronized void close() {
+        if (closed) { return; }
+        closed = true;
+        if (!zkClientService.isEnabled()) { return; }
+        if (reconnectListener != null) {
+            zkClientService.getClient().getConnectionStateListenable().removeListener(reconnectListener);
         }
+        for (String path : registeredPaths) {
+            try { zkClientService.delete(path); } catch (RuntimeException e) { log.warn("注销 RPC 服务失败：" + path, e); }
+        }
+        registeredPaths.clear();
     }
-
-
 }

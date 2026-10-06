@@ -1,29 +1,24 @@
 package org.hu.rpc.core.route.loadbalancing;
 
+import org.hu.rpc.exception.SimpleRpcException;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
-/**
- * @Author: hu.chen
- * @Description: 默认轮询的负载均衡策略
- * @DateTime: 2021/12/27 9:09 PM
- **/
+/** 每个服务独立进行线程安全的轮询。 */
 @Component
-public class DefaultRpcLoadBalancing implements RpcLoadBalancing{
-
-    /**
-     * 计数器
-     */
-    private volatile static int count=0;
+public class DefaultRpcLoadBalancing implements RpcLoadBalancing {
+    private final Map<String, AtomicInteger> counters = new ConcurrentHashMap<>();
 
     @Override
-    public String[] load(List<String[]> services,String path) {
-        if(count==services.size()){
-            count=0;
+    public String[] load(List<String[]> services, String path) {
+        if (services == null || services.isEmpty()) {
+            throw new SimpleRpcException("没有可以提供服务的服务者：" + path);
         }
-        String[] service = services.get(count);
-        count++;
-        return service;
+        int count = counters.computeIfAbsent(path, key -> new AtomicInteger()).getAndIncrement();
+        return services.get(Math.floorMod(count, services.size()));
     }
 }

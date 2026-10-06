@@ -19,6 +19,6 @@ public class RpcStartMain implements CommandLineRunner {
     @Override
     public void run(String... args) throws Exception {
         // 启动 Netty 服务端
-        new Thread(nettyRpcServer).start();
+        nettyRpcServer.start();
     }
 }

@@ -2,9 +2,7 @@ package org.hu.rpc.config;
 
 import org.hu.rpc.core.route.loadbalancing.*;
 import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
 
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -13,7 +11,6 @@ import java.util.concurrent.ConcurrentHashMap;
  * @Description: Netty 配置类
  * @DateTime: 2021/12/26 6:39 PM
  **/
-@EnableConfigurationProperties(NettyClientConfig.class)
 @ConfigurationProperties(prefix = "simplerpc.consumer")
 public class NettyClientConfig {
 
@@ -25,25 +22,37 @@ public class NettyClientConfig {
     /**
      * 客户端连接超时时间
      */
-    private Integer connecttimeout = 3000;
+    private Integer connectTimeout = 3000;
+
+    /** RPC 响应超时时间（毫秒）。 */
+    private Integer requestTimeout = 3000;
 
     /**
      * 负载均衡策略
      */
-    private String loadbalancing = LoadBalancingConst.POLLING;
+    private String loadBalancing = LoadBalancingConst.POLLING;
 
-
-    private List<String[]> arrayAddress = null;
-
-
-    public Integer getConnecttimeout() {
-        return connecttimeout;
+    public Integer getConnectTimeout() {
+        return connectTimeout;
     }
 
-    public void setConnecttimeout(Integer connecttimeout) {
-        this.connecttimeout = connecttimeout;
+    public void setConnectTimeout(Integer connectTimeout) {
+        if (connectTimeout == null || connectTimeout <= 0) {
+            throw new IllegalArgumentException("connectTimeout 必须大于 0");
+        }
+        this.connectTimeout = connectTimeout;
     }
 
+    public Integer getRequestTimeout() {
+        return requestTimeout;
+    }
+
+    public void setRequestTimeout(Integer requestTimeout) {
+        if (requestTimeout == null || requestTimeout <= 0) {
+            throw new IllegalArgumentException("requestTimeout 必须大于 0");
+        }
+        this.requestTimeout = requestTimeout;
+    }
 
     public Map<String, String> getAddress() {
         return address;
@@ -53,21 +62,12 @@ public class NettyClientConfig {
         this.address = address;
     }
 
-    public String getLoadbalancing() {
-        return loadbalancing;
+    public String getLoadBalancing() {
+        return loadBalancing;
     }
 
-    public void setLoadbalancing(String loadbalancing) {
-        this.loadbalancing = loadbalancing;
+    public void setLoadBalancing(String loadBalancing) {
+        this.loadBalancing = loadBalancing;
     }
-
-    public List<String[]> getArrayAddress() {
-        return arrayAddress;
-    }
-
-    public void setArrayAddress(List<String[]> arrayAddress) {
-        this.arrayAddress = arrayAddress;
-    }
-
 
 }

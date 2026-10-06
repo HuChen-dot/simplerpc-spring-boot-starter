@@ -1,0 +1,27 @@
+# 本地环境：使用静态地址，无需注册中心。
+# SimpleRPC 框架配置。
+simplerpc:
+  # 本进程的 RPC 服务端配置。
+  server:
+    # 是否启动本地 RPC 服务端：true 发布服务，false 仅作为消费者调用远程服务。
+    enabled: true
+    # RPC TCP 监听端口；读取 RPC_PORT，未设置时使用 9091；与 HTTP 端口不同。
+    port: ${RPC_PORT:9091}
+    # Netty 服务端连接事件日志级别，可选 trace / debug / info / warn / error。
+    # 实际输出还受应用日志级别控制；不是业务日志级别。
+    log-level: info
+    # Netty 网络线程与 TCP 连接队列配置。
+    thread-pool:
+      # 接收新 TCP 连接的线程数，必须大于 0；默认 1。
+      boss-group-size: 1
+      # 处理网络读写的线程数，示例设为 4；0 使用 Netty 默认线程数，不允许负数。
+      # 业务方法在独立线程组执行，其线程数为 max(2, 此配置值)。
+      worker-group-size: 4
+      # TCP 等待接受连接的队列长度（SO_BACKLOG），不是线程任务队列；必须大于 0。
+      # 示例值为 1024，实际队列大小还受操作系统限制。
+      backlog: 1024
+  # 服务注册与发现配置；服务端和客户端必须使用相同的注册中心。
+  registry:
+    # 注册中心类型：none 使用静态地址，redis 使用 Redis，zk 使用 ZooKeeper。
+    # type 统一决定注册中心；Redis/ZooKeeper 模式只使用发现结果。
+    type: none

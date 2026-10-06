@@ -2,68 +2,76 @@ package org.hu.rpc.core.client;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
+import org.hu.rpc.common.entity.RpcResponse;
+import org.hu.rpc.exception.SimpleRpcException;
+import org.hu.rpc.util.JsonUtils;
 
-import java.util.concurrent.Callable;
+import java.util.Map;
+import java.util.concurrent.*;
 
-/**
- * @Author: hu.chen
- * @Description: 服务端业务处理Handler；继承SimpleChannelInboundHandler时指定的
- * 泛型为消息的类型，
- * @DateTime: 2021/12/25 3:05 PM
- **/
-public class RpcClientHandler extends SimpleChannelInboundHandler<String> implements Callable {
+/** 按请求 ID 关联响应，不阻塞 Netty 事件线程。 */
+public class RpcClientHandler extends SimpleChannelInboundHandler<String> {
+    private volatile ChannelHandlerContext ctx;
+    private final Map<String, CompletableFuture<RpcResponse>> pending = new ConcurrentHashMap<>();
 
-
-    private ChannelHandlerContext ctx;
-
-    /**
-     * 发送的消息
-     */
-    private String request;
-
-    /**
-     * 服务端返回的消息
-     */
-    private String response;
-
-    public void setRequest(String request) {
-        this.request = request;
-    }
-
-    /**
-     * 通道就绪事件（给服务端发送消息）
-     *
-     * @param ctx
-     * @throws Exception
-     */
     @Override
-    public void channelActive(ChannelHandlerContext ctx) throws Exception {
+    public void handlerAdded(ChannelHandlerContext ctx) {
         this.ctx = ctx;
     }
 
-    /**
-     * 处理通道读取事件
-     *
-     * @param ctx
-     * @param msg
-     * @throws Exception
-     */
-    @Override
-    protected synchronized void channelRead0(ChannelHandlerContext ctx, String msg) throws Exception {
-
-        this.response=msg;
-
-        // 唤醒等待的线程
-        notifyAll();
-
+    public RpcResponse send(String request, int timeoutMillis) throws ExecutionException, InterruptedException {
+        String requestId = JsonUtils.parseObject(request).getString("requestId");
+        if (requestId == null || requestId.isEmpty()) {
+            throw new SimpleRpcException("请求 ID 不能为空");
+        }
+        CompletableFuture<RpcResponse> future = new CompletableFuture<>();
+        if (pending.putIfAbsent(requestId, future) != null) {
+            throw new SimpleRpcException("请求 ID 重复：" + requestId);
+        }
+        try {
+            ChannelHandlerContext context = ctx;
+            if (context == null || !context.channel().isActive()) {
+                throw new SimpleRpcException("RPC 连接已关闭");
+            }
+            context.writeAndFlush(request).addListener(result -> {
+                if (!result.isSuccess()) {
+                    future.completeExceptionally(result.cause());
+                }
+            });
+            return future.get(timeoutMillis, TimeUnit.MILLISECONDS);
+        } catch (TimeoutException e) {
+            throw new SimpleRpcException("RPC 响应超时：" + timeoutMillis + "ms，requestId=" + requestId, e);
+        } finally {
+            pending.remove(requestId, future);
+        }
     }
 
     @Override
-    public synchronized String call() throws Exception {
-
-        ctx.writeAndFlush(request);
-        wait();
-
-        return response;
+    protected void channelRead0(ChannelHandlerContext ctx, String msg) {
+        RpcResponse response = JsonUtils.parse(msg, RpcResponse.class);
+        if (response == null || response.getRequestId() == null) {
+            throw new SimpleRpcException("RPC 响应缺少请求 ID");
+        }
+        CompletableFuture<RpcResponse> future = pending.get(response.getRequestId());
+        if (future != null) {
+            future.complete(response);
+        }
     }
+
+    @Override
+    public void channelInactive(ChannelHandlerContext ctx) {
+        failPending(new SimpleRpcException("RPC 连接已关闭"));
+        ctx.fireChannelInactive();
+    }
+
+    @Override
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+        failPending(cause);
+        ctx.close();
+    }
+
+    private void failPending(Throwable cause) {
+        pending.values().forEach(future -> future.completeExceptionally(cause));
+    }
+
 }

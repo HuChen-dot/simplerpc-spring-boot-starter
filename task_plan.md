@@ -50,3 +50,9 @@ Redis 最终验证：真实 Redis 7.4.2 测试进程下 clean package 成功；1
 执行全部回归测试与聚合构建，验证 local/redis/zk 示例实际调用及配置绑定，检查旧入口残留。
 
 最终验证：clean package 与最终聚合 package 成功；10 组 49 项测试通过，0 failures/errors/skipped。两端 JAR 在默认/显式 local、环境变量 Redis/ZooKeeper、启动参数覆盖环境五种场景的中文 RPC 调用通过，Redis/ZooKeeper 额外使用 response-time 策略。实际启动确认已删除的注册开关被拒绝；八份 YAML 的 86 个配置键仍有中文注释；源码、示例和 README 无旧开关与兼容入口残留，JAR 仅含新调用处理器，全部临时进程关闭，差异格式检查通过。
+
+### Phase 12: 1.7.7 发布准备 [complete]
+升级项目与示例版本，迁移已停用的 OSSRH 发布配置到 Central Publisher Portal，生成并验证正式发布产物。
+
+### Phase 13: Maven Central 与 GitHub 发布 [pending: 等待 Central Token 与 GPG 签名密钥]
+签名并发布 1.7.7，确认 Maven Central 状态；提交版本、创建标签并推送 GitHub。

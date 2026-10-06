@@ -6,7 +6,7 @@
     <parent>
         <groupId>io.github.HuChen-dot</groupId>
         <artifactId>simplerpc-examples</artifactId>
-        <version>1.7.6</version>
+        <version>1.7.7</version>
     </parent>
     <artifactId>simplerpc-example-client</artifactId>
     <dependencies>
